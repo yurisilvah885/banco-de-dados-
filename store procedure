@@ -1,0 +1,210 @@
+drop database teste;
+create database teste;
+use teste;
+#1,2#
+CREATE TABLE DEPTO (
+cod_depto int PRIMARY KEY,
+Nome varchar (50)
+);
+
+CREATE TABLE EMPREGADO (
+cod_empregado int PRIMARY KEY,
+cod_depto int FOREIGN KEY,
+nome varchar (50),
+dt_nascimento date,
+sexo char,
+dt_admissao date,
+est_civil char(1),
+salario numeric(10,2)
+);
+
+CREATE TABLE DEPENDENTE(
+ cod_depenente int PRIMARY KEY,
+ cod_empregado int FOREIGN KEY
+ nome varchar (50),
+ dt_nascimento date,
+ sexo char(1) 
+ );
+ 
+ CREATE TABLE SEXO (
+    cod_sexo char(1) PRIMARY KEY,
+    descricao varchar(10) NOT NULL
+);
+
+#3-- Inserção dos valores possíveis para o sexo (M - Masculino, F - Feminino)
+INSERT INTO SEXO (cod_sexo, descricao)
+VALUES
+    ('M', 'Masculino'),
+    ('F', 'Feminino');
+
+#8 -- Alteração da tabela EMPREGADO para incluir uma chave estrangeira para SEXO
+ALTER TABLE EMPREGADO
+ADD COLUMN cod_sexo char(1),
+ADD FOREIGN KEY (cod_sexo) REFERENCES SEXO(cod_sexo);
+ 
+ INSERT INTO DEPTO VALUES( nome = "calleri");
+ INSERT INTO EMPREGADO VALUES (sexo= "M");
+ 
+DELIMITER //
+#4
+CREATE PROCEDURE CalculaEstatisticasDepartamento(IN codigoDepartamento INT)
+BEGIN
+    DECLARE totalSalarios DECIMAL(10,2);
+    DECLARE mediaSalarial DECIMAL(10,2);
+    DECLARE maiorSalario DECIMAL(10,2);
+    DECLARE menorSalario DECIMAL(10,2);
+
+    -- Calcula a somatória dos salários do departamento
+    SELECT SUM(salario) INTO totalSalarios
+    FROM EMPREGADO
+    WHERE cod_depto = codigoDepartamento;
+
+    -- Calcula a média salarial do departamento
+    SELECT AVG(salario) INTO mediaSalarial
+    FROM EMPREGADO
+    WHERE cod_depto = codigoDepartamento;
+
+    -- Calcula o maior salário do departamento
+    SELECT MAX(salario) INTO maiorSalario
+    FROM EMPREGADO
+    WHERE cod_depto = codigoDepartamento;
+
+    -- Calcula o menor salário do departamento
+    SELECT MIN(salario) INTO menorSalario
+    FROM EMPREGADO
+    WHERE cod_depto = codigoDepartamento;
+
+    -- Exibe os resultados
+    SELECT totalSalarios AS 'Total de Salários',
+           mediaSalarial AS 'Média Salarial',
+           maiorSalario AS 'Maior Salário',
+           menorSalario AS 'Menor Salário';
+END //
+
+#5 CREATE PROCEDURE ContagemFuncionariosPorSexo(IN nome VARCHAR(50))
+AS
+BEGIN
+    DECLARE  INT;
+    
+    -- Encontre o código do departamento com base no nome
+    SELECT @codigoDepartamento = cod_depto
+    FROM DEPTO
+    WHERE Nome = nomeDepartamento;
+
+    IF @codigoDepartamento IS NOT NULL
+    BEGIN
+        -- Contagem de funcionários do sexo masculino (M)
+        DECLARE @countMasculino INT;
+        SELECT @countMasculino = COUNT(*)
+        FROM EMPREGADO
+        WHERE cod_depto = @codigoDepartamento AND sexo = 'M';
+
+        -- Contagem de funcionárias do sexo feminino (F)
+        DECLARE @countFeminino INT;
+        SELECT @countFeminino = COUNT(*)
+        FROM EMPREGADO
+        WHERE cod_depto = @codigoDepartamento AND sexo = 'F';
+
+        -- Resultados
+        SELECT @countMasculino AS 'Masculino',
+               @countFeminino AS 'Feminino';
+    END
+    ELSE
+    BEGIN
+        -- Departamento não encontrado
+        PRINT 'Departamento não encontrado.';
+    END;
+    
+    #6 
+    CREATE PROCEDURE InserirDepartamento(IN codigoDepartamento INT, IN nomeDepartamento VARCHAR(50))
+AS
+BEGIN
+    -- Verifique se o código do departamento já existe na tabela
+    IF EXISTS (SELECT 1 FROM DEPTO WHERE cod_depto = codigoDepartamento)
+    BEGIN
+        PRINT 'Código do departamento já existe. A inserção não foi realizada.';
+    END
+    ELSE
+    BEGIN
+        -- Insira o novo departamento na tabela
+        INSERT INTO DEPTO (cod_depto, Nome)
+        VALUES (codigoDepartamento, nomeDepartamento);
+
+        PRINT 'Departamento inserido com sucesso.';
+    END
+END;
+
+CREATE PROCEDURE AumentoSalarialMulheres
+AS
+BEGIN
+    -- Atualize o salário de todas as empregadas do sexo feminino
+    UPDATE EMPREGADO
+    SET salario = salario * 1.05
+    WHERE cod_sexo = 'F';
+
+    PRINT 'Aumento salarial aplicado às empregadas do sexo feminino.';
+END;
+
+
+#7 
+CREATE PROCEDURE AumentoSalarialHomens(IN percentualAumento DECIMAL(5,2))
+AS
+BEGIN
+    -- Atualize o salário de todos os empregados do sexo masculino
+    UPDATE EMPREGADO
+    SET salario = salario * (1 + (percentualAumento / 100))
+    WHERE cod_sexo = 'M';
+
+    PRINT 'Aumento salarial aplicado aos empregados do sexo masculino.';
+END;
+
+CREATE TABLE ESTADO_CIVIL (
+    cod_estado_civil char(1) PRIMARY KEY,
+    descricao varchar(20) NOT NULL
+);
+
+-- Inserção dos valores possíveis para o estado civil
+INSERT INTO ESTADO_CIVIL (cod_estado_civil, descricao)
+VALUES
+    ('S', 'Solteiro'),
+    ('C', 'Casado'),
+    ('D', 'Divorciado'),
+    ('V', 'Viúvo');
+
+#9 -- Alteração da tabela EMPREGADO para incluir uma chave estrangeira para ESTADO_CIVIL
+ALTER TABLE EMPREGADO
+ADD COLUMN cod_estado_civil char(1),
+ADD FOREIGN KEY (cod_estado_civil) REFERENCES ESTADO_CIVIL(cod_estado_civil);
+
+
+    #10 CREATE PROCEDURE CalcularTempoServico(IN cod_empregado INT, OUT anos INT, OUT meses INT, OUT dias INT)
+BEGIN
+    DECLARE dataAdmissao DATE;
+    DECLARE dataAtual DATE;
+
+    -- Obter a data de admissão do empregado
+    SELECT dt_admissao INTO dataAdmissao
+    FROM EMPREGADO
+    WHERE cod_empregado = cod_empregado;
+
+    -- Obter a data atual
+    SET dataAtual = CURDATE();
+
+    -- Calcular o tempo de serviço
+    SET anos = YEAR(dataAtual) - YEAR(dataAdmissao);
+    SET meses = MONTH(dataAtual) - MONTH(dataAdmissao);
+    SET dias = DAY(dataAtual) - DAY(dataAdmissao);
+
+    -- Ajustar para valores negativos
+    IF dias < 0 THEN
+        SET meses = meses - 1;
+        SET dias = dias + 30; -- Supondo um mês de 30 dias
+    END IF;
+
+    IF meses < 0 THEN
+        SET anos = anos - 1;
+        SET meses = meses + 12;
+    END IF;
+END //
+
+DELIMITER ;
